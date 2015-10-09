@@ -1,0 +1,30 @@
+import csv
+import pyproj
+import hashlib
+import pandas as pd
+from osgeo import ogr
+f=open('/Users/patrick/3cixty/IN/SG/bus-stops-10-06-15.csv')
+#f1=open('/Users/patrick/3cixty/IN/SG/bus-stops-10-06-15_test.csv')
+busData = csv.reader(f,delimiter=',')
+#writer = csv.writer(f1, delimiter=',')
+
+next(busData,None)
+
+for row in busData:
+    #writer=csv.writer(f)
+    #writer.writerow('stopid')
+    #for i in range(row):
+        #writer.writerow((hashlib.sha1(row[2]).hexdigest())
+    
+    #print(busData['stopid'])
+    print(hashlib.sha1(row[2]).hexdigest()) #unique ID based on London TF: bus ID
+    
+    bng = pyproj.Proj(init='epsg:27700')
+    wgs84 = pyproj.Proj(init='epsg:4326')
+    lon,lat = pyproj.transform(bng,wgs84,row[4], row[5]) 
+    print(lon,lat) #convert BNG to WGS84
+  
+    #point = ogr.Geometry(ogr.wkbPoint)
+    #point.AddPoint(row[4], row[5])
+    #print point.ExportToWkt()
+    
