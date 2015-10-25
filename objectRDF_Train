@@ -1,3 +1,4 @@
+__author__ = 'Wick 1'
 __author__ = 'patrick'
 
 import csv
@@ -14,7 +15,7 @@ def __init__(self):
     prefixes=self.readDict()
     self.bindingPrefixes(prefixes)
 
-def readCsv(inputfile):
+def readCsv(inputfile): #+TICKED
     try:
         f=open(inputfile);
         rf=csv.reader(f,delimiter=',');
@@ -33,12 +34,12 @@ def readDict(self):
     f.close()
     return dict
 
-def getUid(self,s,n):
+def getUid(self,s,n): #+TICKED
     idencode=s.encode('utf-8')
     uid=uuid.uuid5(n, idencode)
     return uid
 
-def convertProj(self,lon,lat):
+def convertProj(self,lon,lat): #+TICKED
     Bng = pyproj.Proj(init='epsg:27700')
     Wgs84 = pyproj.Proj(init='epsg:4326')
     wgsLon,wgsLat = pyproj.transform(Bng,Wgs84,lon, lat)
@@ -51,11 +52,11 @@ def writeDict(self,prefixes):
         w.writerow(prefixes.values())
     f.close()
 
-def bindingPrefixes(self,prefixes):
+def bindingPrefixes(self,prefixes):#+TICKED
     for key in prefixes:
         self.g.bind(key, prefixes[key])
 
-def getTrainData(row): #amended
+def getTrainData(row): #amended #+TICKED
 
     #naptan = Namespace("http://transport.data.gov.uk/def/naptan/")
     #uid=uuid.uuid5(naptan, idencode)
@@ -90,23 +91,23 @@ def getTrainData(row): #amended
     return lst
 
 
-def createTrainStop(self,stopId):
+def createTrainStop(self,stopId): #+TICKED
     singleStop = URIRef("http://data.linkedevents.org/transit/London/station/" + stopId)
     return singleStop
 
 
-def createGeometry(self, stopsGUID):
+def createGeometry(self, stopsGUID): #+TICKED
     singleGeometry = URIRef(('http://data.linkedevents.org/location/%s/geometry') % stopsGUID)
     return singleGeometry
 
-def createAddress(self, stopsGUID):
+def createAddress(self, stopsGUID): #+TICKED
     singleAddress = URIRef(('http://data.linkedevents.org/location/%s/address') % stopsGUID)
     return singleAddress
 
-def writeRDF(self,outputfile):
+def writeRDF(self,outputfile): #!!doesnt exist
      self.g.serialize(outputfile,format='turtle')
 
-def creatRDF(self,row):
+def creatRDF(self,row):#+TICKED = def createBuslineGraph(arg,busline_g):
 
     nspaces=self.readDict()
 
@@ -126,7 +127,7 @@ def creatRDF(self,row):
     #rdfs = Namespace(nspaces.get('rdfs'))
 
     stopid  = row[1]
-    uid=self.getUid(row[0],naptan)
+    uid=self.getUid(row[0],naptan) #?
 
     stopLat,stopLong=convertProj(row[5],row[6]) ##COLUMN MUMBERS UPDATED TO SUIT###
     #stopLat,stopLong=convertProj(row[4],row[5])
@@ -177,7 +178,7 @@ def creatRDF(self,row):
     #self.g.add((singleStop, rdfs.label, stopLabel))
     return self
 
-def main():
+def main(): #+TICKED
     #root = tk.Tk()
     #root.withdraw()
     #inFile = filedialog.askopenfilename()
@@ -241,5 +242,4 @@ def main():
 
 if __name__ == "__main__":
     main();
-
 
