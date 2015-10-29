@@ -21,7 +21,6 @@ def readCsv(inputfile): #+TICKED
          print ("I/O error({0}): {1}".format(e.errno, e.strerror))
          raise
 
-
 def ConvertProj(lat,lon): #+TICKED
     Bng = pyproj.Proj(init='epsg:27700')
     Wgs84 = pyproj.Proj(init='epsg:4326')
@@ -98,6 +97,19 @@ def createGeometry(stationTitle): #+TICKED
     singleGeometry = URIRef("http://data.linkedevents.org/location/" + stationTitle + "/geometry")
     return singleGeometry
 
+#-------- Trainlines
+#create line URL
+def createLine(trainId):
+    lineId = URIRef('http://data.linkedevents.org/transit/London/trainLine/' + trainId)
+    return lineId
+
+
+#create route
+def createRoute(route):
+    trainRoute = URIRef('http://data.linkedevents.org/transit/London/route/' + route)
+    return trainRoute
+
+
 #create train station and train line graphs
 def createTrainGraph(arg,g): #+TICKED
 
@@ -146,47 +158,6 @@ def createTrainGraph(arg,g): #+TICKED
     g.add((singleLine, transit.route, createRoute(arg[10])))
     g.add((createRoute(arg[10]), schema.name, Literal(arg[11])))
     return g
-
-#-------- Trainlines
-
-#create line URL
-def createLine(trainId):
-    lineId = URIRef('http://data.linkedevents.org/transit/London/trainLine/' + trainId)
-    return lineId
-
-#create line geometry url
-def createGeometryURL(trainId):
-    geometryURL = URIRef('http://data.linkedevents.org/transit/London/trainLine/' + trainId + '/geometry')
-    return geometryURL
-
-#create geometry
-def createGeometry(trainWkt):
-    routeGeometry = Literal(trainWkt)
-    return routeGeometry
-
-#create routeService or serviceId
-def createRouteService(route, run):
-    routeService = URIRef('http://data.linkedevents.org/transit/London/service/' + route + '_' + Literal(run))
-    return routeService
-
-#create route
-def createRoute(route):
-    trainRoute = URIRef('http://data.linkedevents.org/transit/London/route/' + route)
-    return trainRoute
-
-def createServiceStop(service, stopCode):
-    serviceStopId = URIRef('http://data.linkedevents.org/transit/London/serviceStop/' + service + '/' + Literal(stopCode))
-    return serviceStopId
-
-#create service URL
-def createService(service):
-    serviceURL = URIRef('http://data.linkedevents.org/transit/London/service/' + service)
-    return serviceURL
-
-#create stop URL
-def createStop(stopCode): #+TICKED
-    stopURL = URIRef('http://data.linkedevents.org/transit/London/station/' + Literal(stopCode)) #amended
-    return stopURL
 
 
 def main():
