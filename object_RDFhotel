@@ -1,0 +1,157 @@
+__author__ = 'patrick'
+
+
+import csv
+import uuid
+import pyproj
+from rdflib import URIRef, Literal, Namespace, plugin, Graph, ConjunctiveGraph
+from rdflib.store import Store
+
+def readCsv(inputfile):
+    try:
+          f=open(inputfile,'rU');
+          rf=csv.reader(f,delimiter=',');
+          return rf;
+    except IOError as e:
+         print ("I/O error({0}): {1}".format(e.errno, e.strerror))
+         raise
+
+def getUid(r0):
+    hotelUri = Namespace("www.openstreetmap.org/planet.osm/london")
+    idencode=r0.encode('utf-8')
+    uid=uuid.uuid5(hotelUri, idencode)
+    return uid
+
+def definePrefixes():
+
+    prefixes = {'schema':'http://schema.org/',
+
+        'owl':'http://www.w3.org/2002/07/owl#',
+        'xsd': 'http://www.w3.org/2001/XMLSchema#',
+        'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+
+        'locationOnt': 'http://data.linkedevents.org/def/location#', #?
+        'locationRes': 'http://data.linkedevents.org/location/',
+        'geom': 'http://geovocab.org/geometry#',
+        'geo': 'http://www.w3.org/2003/01/geo/wgs84_pos#',
+        'gsp': 'http://www.opengis.net/ont/geosparql#',
+
+        'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+        'dcterms': 'http://purl.org/dc/terms/',
+        'dul': 'http://ontologydesignpatterns.org/ont/dul/DUL.owl#',
+        'locn': 'http://www.w3.org/ns/locn#',
+        'foaf': 'http://xmlns.com/foaf/0.1/',
+        'dc': 'http://purl.org/dc/elements/1.1/',
+        'time': 'http://www.w3.org/2006/time#',
+        'acco': 'http://purl.org/acco/ns#',
+        'gr': 'http://purl.org/goodrelations/v1#'}
+    return prefixes
+
+def bindingPrefixes(g,prefixes):
+    for key in prefixes:
+        g.bind(key, prefixes[key])
+    return g
+
+def createHotelId(hotelId):
+    hotelId = URIRef('http://data.linkedevents.org/places/London/hotels/' + hotelId)
+    return hotelId
+
+def getHotelData(row):
+
+    hotelId = row[0]
+    hotelGUID = getUid(row[0])
+    hotelTitle= Literal(str(row[1]))
+    hotelLat=row[2]
+    hotelLong=row[3]
+    hotelGeom= "POINT ("+str(hotelLat) +" "+str(hotelLong)+")"
+    hotelPostCd= row[5]
+    hotelAddr= row[6]
+    hotelWebsite=row[7]
+    hotelDescr=row[8]
+
+    hotelPublisher = URIRef('http://www.openstreetmap.org/planet.osm')
+    hotelBusinessType = URIRef('http://data.linkedevents.org/kos/3cixty/hotel')
+
+    lst = [hotelId, hotelGUID, hotelTitle, hotelLat, hotelLong, hotelGeom, hotelPostCd,
+           hotelAddr, hotelWebsite, hotelDescr,hotelPublisher, hotelBusinessType]
+    return lst
+
+def createHotelGraph(arg,g):
+
+        schema = Namespace("http://schema.org/")
+        xsd = Namespace("http://www.w3.org/2001/XMLSchema#")
+        rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#")
+        locationOnt = Namespace("http://data.linkedevents.org/def/location#")
+        locationRes= Namespace("http://data.linkedevents.org/location/"),
+        geo = Namespace("http://www.w3.org/2003/01/geo/wgs84_pos#")
+        gs = Namespace("http://www.opengis.net/ont/geosparql#")
+        rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+        dul = Namespace("http://ontologydesignpatterns.org/ont/dul/DUL.owl#")
+        locn = Namespace("http://www.w3.org/ns/locn#")
+        dc = Namespace("http://purl.org/dc/elements/1.1/")
+        rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+        acco = Namespace("http://purl.org/acco/ns#")
+        gr = Namespace('http://purl.org/goodrelations/v1#')
+        foaf= Namespace('http://xmlns.com/foaf/0.1/')
+        dcterms= Namespace('http://purl.org/dc/terms/')
+
+        #locationRes = createHotelId(arg[2].replace(" ", "-").lower())
+        locationRes = URIRef("http://data.linkedevents.org/location/"+Literal(arg[1]))
+        singleGeometry= URIRef("http://data.linkedevents.org/location/" + "%s" + "/geometry") % arg[1]
+        singleAddress= URIRef("http://data.linkedevents.org/location/" + "%s" + "/address") % arg[1]
+
+        g.add((locationRes, rdf.type, locationOnt.Hotel))
+        g.add((locationRes, rdf.type, dul.place))
+        g.add((locationRes, rdf.type, acco.Hotel))
+        g.add((locationRes, rdfs.label, Literal(arg[2])))
+        g.add((locationRes, locationOnt.businessType, Literal("Hotel")))
+        g.add((locationRes, schema.name, Literal("Hotel")))
+        g.add((locationRes, dc.publisher, arg[10]))
+        g.add((locationRes, geo.location, singleGeometry))
+
+        g.add((singleGeometry, rdf.type, geo.Point))
+        g.add((singleGeometry, geo.lat, Literal(arg[3], datatype=xsd.double)))
+        g.add((singleGeometry, geo.long, Literal(arg[4], datatype=xsd.double)))
+        g.add((singleGeometry, locn.geometry, Literal(arg[5], datatype=gs.wktLiteral)))
+
+        g.add((singleAddress, rdf.type, acco.Hotel))
+        g.add((singleAddress, dcterms.Title, Literal(arg[2])))
+        g.add((singleAddress, schema.address, Literal(arg[7])))
+        g.add((singleAddress, schema.postalAddress, Literal(arg[6])))
+        g.add((singleAddress, gr.description, Literal(arg[9])))
+        g.add((singleAddress, foaf.page, Literal(arg[8])))
+        g.add((singleAddress, geo.location, singleGeometry))
+
+        return g
+
+
+def main():
+    pathf="/Users/patrick/3cixty/IN/RM/hotel/"
+    inFile = pathf+"hotelData_151104.csv"
+    outFile=pathf+"hotelData_151104.ttl"
+
+    csv=readCsv(inFile)
+    next(csv, None)  #FILE WITH HEADERS
+
+    store = plugin.get('IOMemory', Store)()
+    g = Graph(store)
+
+    prefixes=definePrefixes()
+    print('Binding Prefixes')
+    bindingPrefixes(g,prefixes)
+
+    print('Creating graph-Hotel...') #AMENDED
+    for row in csv:
+        lstData = getHotelData(row)
+    createHotelGraph(lstData,g).serialize(outFile,format='turtle')
+
+    print ('DONE!')
+
+if __name__ == "__main__":
+    main();
+
+
+
+
+
+
