@@ -6,6 +6,7 @@ import uuid
 import pyproj
 from rdflib import URIRef, Literal, Namespace, plugin, Graph, ConjunctiveGraph
 from rdflib.store import Store
+from rdflib.serializer import Serializer
 
 def readCsv(inputfile):
     try:
@@ -127,14 +128,16 @@ def createHotelGraph(arg,g):
 
 def main():
     pathf="/Users/patrick/3cixty/IN/RM/hotel/"
-    inFile = pathf+"hotelData_151104.csv"
-    outFile=pathf+"hotelData_151104.ttl"
+    inFile = pathf+"hotel_data.csv"
+    outFile= pathf+"hotel_data.ttl"
+    outFileQuad=pathf+"hotel_dataQuad.ttl"
 
     csv=readCsv(inFile)
     next(csv, None)  #FILE WITH HEADERS
 
     store = plugin.get('IOMemory', Store)()
-    g = Graph(store)
+    g = ConjunctiveGraph(store)
+
 
     prefixes=definePrefixes()
     print('Binding Prefixes')
@@ -144,6 +147,7 @@ def main():
     for row in csv:
         lstData = getHotelData(row)
     createHotelGraph(lstData,g).serialize(outFile,format='turtle')
+    createHotelGraph(lstData,g).serialize(outFileQuad,format='nquads')
 
     print ('DONE!')
 
