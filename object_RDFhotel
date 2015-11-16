@@ -3,49 +3,50 @@ __author__ = 'patrick'
 import csv
 import uuid
 import pyproj
+import random
+from random import seed
+import string
 from rdflib import URIRef, Literal, Namespace, plugin, Graph, BNode
 from rdflib.store import Store
-
-
 import time
 
 start_time = time.time()
 
 def readCsv(inputfile):
     try:
-          f=open(inputfile,'rU')
-          rf=csv.reader(f,delimiter=',')
-          return rf
+        f = open(inputfile, 'rU')
+        rf = csv.reader(f, delimiter=',')
+        return rf
     except IOError as e:
-         print ("I/O error({0}): {1}".format(e.errno, e.strerror))
-         raise
+        print ("I/O error({0}): {1}".format(e.errno, e.strerror))
+        raise
 
-def getUid(r0):
-    hotelUri =Namespace("http://data.linkedevents.org/places/London/hotels")
-    idencode=r0.encode('utf-8')
-    uid=uuid.uuid5(hotelUri, idencode)
-    #uid=uuid.uuid4()
+def getUid(r0):#use this script to create NON-COMPLIANT uuid
+    hotelUri = Namespace("http://data.linkedevents.org/places/London/hotels")
+    idencode = r0.encode('utf-8')
+    uid = uuid.uuid5(hotelUri, idencode)
     return uid
 
+
 def definePrefixes():
-    prefixes = {'schema':'http://schema.org/',
-        'owl':'http://www.w3.org/2002/07/owl#',
-        'xsd': 'http://www.w3.org/2001/XMLSchema#',
-        'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
-        'locationOnt': 'http://data.linkedevents.org/def/location#',
-        'locationRes': 'http://data.linkedevents.org/location/',
-        'geom': 'http://geovocab.org/geometry#',
-        'geo': 'http://www.w3.org/2003/01/geo/wgs84_pos#',
-        'gsp': 'http://www.opengis.net/ont/geosparql#',
-        'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-        'dcterms': 'http://purl.org/dc/terms/',
-        'dul': 'http://ontologydesignpatterns.org/ont/dul/DUL.owl#',
-        'locn': 'http://www.w3.org/ns/locn#',
-        'foaf': 'http://xmlns.com/foaf/0.1/',
-        'dc': 'http://purl.org/dc/elements/1.1/',
-        'time': 'http://www.w3.org/2006/time#',
-        'acco': 'http://purl.org/acco/ns#',
-        'gr': 'http://purl.org/goodrelations/v1#'}
+    prefixes = {'schema': 'http://schema.org/',
+                'owl': 'http://www.w3.org/2002/07/owl#',
+                'xsd': 'http://www.w3.org/2001/XMLSchema#',
+                'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+                'locationOnt': 'http://data.linkedevents.org/def/location#',
+                'locationRes': 'http://data.linkedevents.org/location/',
+                'geom': 'http://geovocab.org/geometry#',
+                'geo': 'http://www.w3.org/2003/01/geo/wgs84_pos#',
+                'gsp': 'http://www.opengis.net/ont/geosparql#',
+                'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+                'dcterms': 'http://purl.org/dc/terms/',
+                'dul': 'http://ontologydesignpatterns.org/ont/dul/DUL.owl#',
+                'locn': 'http://www.w3.org/ns/locn#',
+                'foaf': 'http://xmlns.com/foaf/0.1/',
+                'dc': 'http://purl.org/dc/elements/1.1/',
+                'time': 'http://www.w3.org/2006/time#',
+                'acco': 'http://purl.org/acco/ns#',
+                'gr': 'http://purl.org/goodrelations/v1#'}
     return prefixes
 
 def bindingPrefixes(g, prefixes):
@@ -57,21 +58,38 @@ def createHotelId(hotelId):
     hotelId = URIRef('http://data.linkedevents.org/places/London/hotels/' + hotelId)
     return hotelId
 
+def createLocationResId(objectId):#USE THIS SCRIPT TO GENERATE QNAME COMPLIANT UUID
+    hotelUri = Namespace("http://data.linkedevents.org/places/London/hotels")
+    idencode = objectId.encode('utf-8')
+    uid = uuid.uuid5(hotelUri, idencode)
+    puid = URIRef("http://data.linkedevents.org/location/" + Literal(uid))
+    uuidList = list(puid)
+    chars = string.ascii_letters
+    pwdSize = 1
+    random.seed(101) #set seed so the random number generated is replicable in the next iteration
+    newId = ''.join((random.choice(chars)) for x in range(pwdSize))
+    uuidList[38] = newId
+    locationResID = ''.join(uuidList)
+
+    return locationResID
+
 def getHotelData(row):
     hotelId = row[0]
     hotelGUID = getUid(row[0])
+    hotelGUIDammend = createLocationResId(row[0])
     hotelTitle = Literal(str(row[1]))
     hotelLat = row[2]
     hotelLong = row[3]
-    hotelGeom = "POINT ("+str(hotelLat) +" "+str(hotelLong)+")"
+    hotelGeom = "POINT (" + str(hotelLat) + " " + str(hotelLong) + ")"
     hotelPostCd = row[5]
     hotelAddr = row[6]
     hotelWebsite = row[7]
     hotelDescr = row[8]
     hotelPublisher = URIRef('http://www.openstreetmap.org/relation/65606')
     hotelBusinessType = URIRef('http://data.linkedevents.org/kos/3cixty/hotel')
+
     lst = [hotelId, hotelGUID, hotelTitle, hotelLat, hotelLong, hotelGeom, hotelPostCd,
-           hotelAddr, hotelWebsite, hotelDescr, hotelPublisher, hotelBusinessType]
+           hotelAddr, hotelWebsite, hotelDescr, hotelPublisher, hotelBusinessType, hotelGUIDammend]
     return lst
 
 def createHotelGraph(arg, g):
@@ -86,18 +104,14 @@ def createHotelGraph(arg, g):
     rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
     acco = Namespace("http://purl.org/acco/ns#")
     gr = Namespace('http://purl.org/goodrelations/v1#')
-    foaf= Namespace('http://xmlns.com/foaf/0.1/')
-    dcterms= Namespace('http://purl.org/dc/terms/')
+    foaf = Namespace('http://xmlns.com/foaf/0.1/')
+    dcterms = Namespace('http://purl.org/dc/terms/')
 
+    locationRes = URIRef(arg[12])
+    singleGeometry = URIRef("http://data.linkedevents.org/location/" + "%s" + "/geometry") % arg[12]
+    singleAddress = URIRef("http://data.linkedevents.org/location/" + "%s" + "/address") % arg[12]
 
-    locationRes = URIRef("http://data.linkedevents.org/location/"+Literal(arg[1]))
-    #print(locationRes+"**"+Literal(arg[2]))
-    singleGeometry= URIRef("http://data.linkedevents.org/location/" + "%s" + "/geometry") % arg[1]
-    singleAddress= URIRef("http://data.linkedevents.org/location/" + "%s" + "/address") % arg[1]
-
-    #g.add((Literal(arg[1]), rdf.type. rdf.id))
     g.add([locationRes, rdf.type, locationOnt.Hotel])
-    #g.add((locationRes, rdf.id, Literal(arg[1])))
     g.add((locationRes, rdf.type, acco.Hotel))
     g.add((locationRes, rdfs.label, Literal(arg[2])))
     g.add((locationRes, locationOnt.businessType, Literal("Hotel")))
@@ -117,46 +131,46 @@ def createHotelGraph(arg, g):
     g.add((singleAddress, gr.description, Literal(arg[9])))
     g.add((singleAddress, foaf.page, Literal(arg[8])))
     g.add((singleAddress, geo.location, singleGeometry))
+    prefixes=definePrefixes()
+    bindingPrefixes(g, prefixes)
 
     return g
-
 
 def createConHotelGraph(arg, g):
     dul = Namespace("http://ontologydesignpatterns.org/ont/dul/DUL.owl#")
     rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
-    locationRes = URIRef("http://data.linkedevents.org/location/"+Literal(arg[1]))
+    locationRes = URIRef("http://data.linkedevents.org/location/" + Literal(arg[12]))
     g.add((locationRes, rdf.type, dul.place))
+
     return g
 
-
-
 def main():
-    pathf="/Users/patrick/3cixty/IN/RM/hotel/"
-    inFile = pathf+"hotel_data_IDamended.csv"
-    outFile=pathf+"hotelData_1111.ttl"
-    outFileQuad=pathf+"hotelDataQuad_1111.ttl"
+    pathf = "/Users/patrick/3cixty/IN/RM/hotel/"
+    inFile = pathf + "hotel_data_IDamended.csv"
+    outFile = pathf + "hotelData_1112.ttl"
+    outFileQuad = pathf + "hotelDataQuad_1112.ttl"
 
-    csv=readCsv(inFile)
-    next(csv, None)  #FILE WITH HEADERS
+    csv = readCsv(inFile)
+    next(csv, None)  # FILE WITH HEADERS
 
     store = plugin.get('IOMemory', Store)()
     g = Graph(store)
 
-    prefixes=definePrefixes()
+    prefixes = definePrefixes()
     print('Binding Prefixes')
     bindingPrefixes(g, prefixes)
 
+    print('Creating graph-Hotel...')  # AMENDED
 
-    print('Creating graph-Hotel...') #AMENDED
-    #for row in csv:
-        #lstData = getHotelData(row)
-        #createConHotelGraph(lstData, g).serialize(outFileQuad, format='nt')
-
+    #This one generates the 'turtle' graph. Please deactivate the script for the 'nt' graph below
     for row in csv:
         lstData = getHotelData(row)
         createHotelGraph(lstData, g).serialize(outFile, format='turtle')
-        #print(createHotelGraph(lstData, g).serialize(format='turtle'))
 
+    #This one generates the 'nt' graph. Please deactivate the script for the 'turtle' graph above
+    #for row in csv:
+        #lstData = getHotelData(row)
+        #createConHotelGraph(lstData, g).serialize(outFileQuad, format='nt')
 
     print ('DONE! Time elapsed ' + str((time.time() - start_time)))
 
