@@ -1,0 +1,36 @@
+import csv
+import pandas as pd
+
+inputfile="/Users/patrick/3cixty/IN/RM/hotel/hotel_data.ttl"
+outfile="/Users/patrick/3cixty/IN/RM/hotel/hotel_data_updated.ttl"
+
+rowlist=[]
+reader=csv.reader(open(inputfile,'r'))
+output=csv.writer(open(outfile,'w+'),lineterminator='\n',escapechar=' ', quoting=csv.QUOTE_NONE)
+
+for row in reader:
+   if(row):
+       rowlist.append(row[0])
+   else:
+       rowlist.append('\n')
+
+x="locn:geometry"
+for i in range(0,len(rowlist)-1):
+    if(rowlist[i].find(x)!=-1):
+        lon=rowlist[i].split()[1].split('(')[1][0:7]
+        rowlist[i-1]="geo:long "+"\""+lon+"\""+"^^xsd:double"
+        lat=rowlist[i].split()[2].split('"')[0].split(')')[0][0:8]
+        rowlist[i-2]="geo:lat "+"\""+lat+"\""+"^^xsd:double"
+
+
+y='locationOnt:businessType "Hotel"'
+for j in range(0,len(rowlist)-1):
+    if(rowlist[j].find(y)!= -1):
+       uuid=rowlist[j+3][56:92]
+       rowlist[j-2]="locationRes:"+uuid+" "+"a"+" "+"locationOnt:Hotel,"
+       print rowlist[j-2]
+
+df=pd.DataFrame(rowlist)
+df.to_csv(outfile,index=False,escapechar=' ',header=False,quoting=csv.QUOTE_NONE)
+
+
