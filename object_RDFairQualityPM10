@@ -1,0 +1,178 @@
+__author__ = 'patrick'
+
+import csv
+import uuid
+import pyproj
+import random
+from random import seed
+import string
+from rdflib import URIRef, Literal, Namespace, plugin, Graph, BNode, collection
+from rdflib.store import Store
+from datetime import datetime, date, time
+from rdflib.collection import Collection
+
+def readCsv(inputfile):
+    try:
+        f = open(inputfile, 'rU')
+        rf = csv.reader(f, delimiter=';')
+        return rf
+    except IOError as e:
+        print ("I/O error({0}): {1}".format(e.errno, e.strerror))
+        raise
+
+def getUid(species, areaCode, recordedAt):
+    airQualUri = Namespace("http://www.londonair.org.uk/london/asp/")
+    idencode = areaCode.encode('utf-8') + str(species) + str(recordedAt)#str(datetime.strftime(recordedAt, '%d/%m/%Y %H:%M'))
+    uid = uuid.uuid5(airQualUri, idencode)
+    return uid
+
+def definePrefixes():
+    prefixes = {'schema': 'http://schema.org/',
+                'owl': 'http://www.w3.org/2002/07/owl#',
+                'xsd': 'http://www.w3.org/2001/XMLSchema#',
+                'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+                'locationOnt': 'http://data.linkedevents.org/def/location#',
+                'locationRes': 'http://data.linkedevents.org/location/',
+                'geom': 'http://geovocab.org/geometry#',
+                'geo': 'http://www.w3.org/2003/01/geo/wgs84_pos#',
+                'gsp': 'http://www.opengis.net/ont/geosparql#',
+                'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+                'dcterms': 'http://purl.org/dc/terms/',
+                'dul': 'http://ontologydesignpatterns.org/ont/dul/DUL.owl#',
+                'locn': 'http://www.w3.org/ns/locn#',
+                'foaf': 'http://xmlns.com/foaf/0.1/',
+                'dc': 'http://purl.org/dc/elements/1.1/',
+                'time': 'http://www.w3.org/2006/time#',
+                'acco': 'http://purl.org/acco/ns#',
+                'gr': 'http://purl.org/goodrelations/v1#',
+                'envo': 'http://purl.obolibrary.org/obo/#',
+                'time':'http://www.w3.org/TR/owl-time#',
+                'gn':'http://www.geonames.org/ontology/#',
+                'qb':'http://purl.org/linked-data/cube#',
+                'sdmx_attribute':'http://purl.org/linked-data/sdmx/2009/attribute#'}
+    return prefixes
+
+def bindingPrefixes(g, prefixes):
+    for key in prefixes:
+        g.bind(key, prefixes[key])
+    return g
+
+def createAirQualityId(airQualGUID, airQualSpecies):
+    airQualId = URIRef("http://data.linkedevents.org/environment/airquality/" + Literal(airQualGUID) + "/" + Literal(airQualSpecies))
+    return airQualId
+
+def createArea(stationCode):
+    area = URIRef('http://data.linkedevents.org/environment/London/laqn/stationCode/' + Literal(stationCode))
+    return area
+
+def createGeom(stationCode):
+    geom = createArea(stationCode) + '/geometry'
+    return geom
+
+def getAirQualData(row):
+
+    airQualStationCode = Literal(str(row[1]))
+    airQualGUID = getUid(row[2], row[1], row[3])
+    airQualSite = Literal(str(row[0]))
+    airQualSpecies = Literal(str(row[2]))
+    airQualDateTime = row[3]
+    airQualValue = row[4]
+    airQualUnit = row[5]
+    airQualRatified=row[6]
+    airQualLat=row[7]
+    airQualLon=row[8]
+    airQualGeom= "POINT(" + str(airQualLat) + " " + str(airQualLon) + ")"
+    airQualPublisher = URIRef('http://www.londonair.org.uk/london/asp/')
+
+    lst = [airQualStationCode, airQualGUID, airQualSite, airQualSpecies,
+           airQualDateTime,airQualValue, airQualUnit, airQualRatified,
+           airQualLat, airQualLon, airQualGeom, airQualPublisher]
+    return lst
+
+def createAirQualGraph(arg, g):
+    schema = Namespace("http://schema.org/")
+    xsd = Namespace("http://www.w3.org/2001/XMLSchema#")
+    rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#")
+    locationOnt = Namespace("http://data.linkedevents.org/def/location#")
+    geo = Namespace("http://www.w3.org/2003/01/geo/wgs84_pos#")
+    gs = Namespace("http://www.opengis.net/ont/geosparql#")
+    locn = Namespace("http://www.w3.org/ns/locn#")
+    dc = Namespace("http://purl.org/dc/elements/1.1/")
+    rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+    foaf = Namespace('http://xmlns.com/foaf/0.1/')
+    dcterms = Namespace('http://purl.org/dc/terms/')
+    dul = Namespace('http://ontologydesignpatterns.org/ont/dul/DUL.owl#')
+    envo = Namespace('http://purl.obolibrary.org/obo/#')
+    time = Namespace('http://www.w3.org/TR/owl-time#')
+    gn= Namespace('http://www.geonames.org/ontology/#')
+    qb=Namespace('http://purl.org/linked-data/cube#')
+    sdmx_attribute= Namespace('http://purl.org/linked-data/sdmx/2009/attribute#')
+    sdmx_dimension= Namespace('http://purl.org/linked-data/sdmx/2009/dimension#')
+    sdmx_subject=Namespace('http://purl.org/linked-data/sdmx/2009/subject#')
+
+    area = createArea(arg[0])
+    geom = createGeom(arg[0])
+    ds_pm10 = createAirQualityId(arg[1], arg[3])
+
+    g.add((area, rdf.type, dul.Place))
+    g.add((area, rdf.type, schema.Place))
+    g.add((area, rdfs.label, Literal(arg[2])))
+    g.add((area, dcterms.identifier, Literal(arg[0])))
+    g.add((area, dcterms.publisher, Literal(arg[11])))
+    g.add((area, dcterms.identifier, Literal(arg[2])))
+
+    g.add((area, geo.location, geom))
+    g.add((area, dcterms.title, Literal('London air particle concentration ('+ arg[3] + ')', lang= 'en')))
+    g.add((area, rdfs.label, Literal('London air particle concentration ('+ arg[3] + ')', lang= 'en')))
+    g.add((area, rdfs.comment, Literal('London air particle concentration, recorded at London Air Quality Network (LAQN) stations',lang= 'en')))
+    g.add((area, dcterms.description, Literal('London air particle concentration ('+ arg[3] + ')', lang= 'en')))
+    g.add((area, qb.measureType, Literal(arg[6])))
+    g.add((area, qb.observation, ds_pm10))
+
+    g.add((geom, rdf.type, geo.Point))
+    g.add((geom, geo.lat, Literal(arg[8], datatype=xsd.double)))
+    g.add((geom, geo.lon, Literal(arg[9], datatype=xsd.double)))
+    g.add((geom, locn.geometry, Literal(arg[10], datatype=xsd.wktLiteral)))
+    g.add((ds_pm10, rdf.type, qb.observation))
+    g.add((ds_pm10, dcterms.issued, Literal(arg[4], datatype=xsd.dateTime)))
+    g.add((ds_pm10, sdmx_dimension.refTime, Literal(arg[4], datatype=xsd.dateTime)))
+    g.bind('sdmx_dimension', sdmx_dimension)
+    g.add((ds_pm10, rdf.value, Literal(arg[5], datatype=xsd.interger)))
+
+    prefixes=definePrefixes()
+    bindingPrefixes(g, prefixes)
+
+    return g
+
+def main():
+    pathf = "/Users/patrick/3cixty/IN/Kings/"
+    #pathf= "C:/PATZ/Projects/1504 3cixty/data/"
+    inFile = pathf + "londonPM10merge.csv"
+    outFile = pathf + "londonPM10merge.ttl"
+
+    csv = readCsv(inFile)
+    next(csv, None)  # FILE WITH HEADERS
+
+    store = plugin.get('IOMemory', Store)()
+    g = Graph(store)
+
+    prefixes = definePrefixes()
+    print('Binding Prefixes')
+    bindingPrefixes(g, prefixes)
+
+    print('Creating graph-environment...')  # AMENDED
+
+    #This one generates the 'turtle' graph. Please deactivate the script for the 'nt' graph below
+    for row in csv:
+        lstData = getAirQualData(row)
+        createAirQualGraph(lstData, g).serialize(outFile, format='turtle')
+
+    #This one generates the 'nt' graph. Please deactivate the script for the 'turtle' graph above
+    #for row in csv:
+        #lstData = getHotelData(row)
+        #createConHotelGraph(lstData, g).serialize(outFileQuad, format='nt')
+
+    #print ('DONE! Time elapsed ' + str((time.time() - start_time)))
+
+if __name__ == "__main__":
+    main()
