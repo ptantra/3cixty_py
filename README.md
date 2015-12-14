@@ -1,6 +1,8 @@
 # 3cixty_py
 Researcher at CASA UCL involved in the 3cixty project
 
+Hotel and train rdf onject scripts are now merged with rmurcio rdf object python scripts. Please refer to rmurcio's for the most up to date scripts.
+
 Workflow for environment RDF object data : Air quality pollutant concentration pm10
 
 - Download the data from Kings college website: London air quality network (LAQN).
